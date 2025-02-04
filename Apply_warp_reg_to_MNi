@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Define the base directory and reference image
+base_dir="/home/iv285/rds/rds-rowe-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing"
+ref_image="/usr/local/software/fsl/6.0.7.15/data/standard/MNI152_T1_2mm.nii.gz"
+
+# Loop through each subject and session
+for subject_dir in ${base_dir}/sub-*; do
+    subject=$(basename "${subject_dir}")
+
+    for session_dir in ${subject_dir}/ses-*; do
+        session=$(basename "${session_dir}")
+
+        # Define input and warp file paths
+        input_file="${session_dir}/Feat_prep_rest.feat/Melodic_70_dim.ica/filtered_func_data_clean.nii.gz"
+        warp_file="${session_dir}/Feat_prep_rest.feat/reg/example_func2standard_warp.nii.gz"
+        output_file="${session_dir}/Feat_prep_rest.feat/Melodic_70_dim.ica/filtered_func_data_clean_MNI_space.nii.gz"
+
+        # Check if required files exist
+        if [[ -f "$input_file" && -f "$warp_file" ]]; then
+            echo "Running applywarp for ${subject}, ${session}..."
+            applywarp --in="$input_file" --ref="$ref_image" --warp="$warp_file" --out="$output_file"
+        else
+            echo "Missing file(s) for ${subject}, ${session}. Skipping."
+        fi
+    done
+done
