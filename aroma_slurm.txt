@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH -J aroma_analysis_36116                          # Job name
+#SBATCH -A RITTMAN-SL3-CPU                               # Allocation account
+#SBATCH -p icelake-himem                                 # Partition name
+#SBATCH -D /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat
+#SBATCH -o /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/aroma_analysis_36116_%a.log
+#SBATCH --nodes=1                                        # Number of nodes
+#SBATCH --ntasks=1                                       # Number of tasks
+#SBATCH --time=04:00:00                                  # Maximum runtime
+#SBATCH -e error_%a.txt                                  # Error output file
+
+# Load environment modules
+. /etc/profile.d/modules.sh                              # Enables the module command
+module purge                                             # Removes all modules still loaded
+module load rhel8/default-icl                            # Loads the basic environment
+module load fsl                                          # Loads FSL module
+
+# Run ICA-AROMA
+python /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/ICA-AROMA/ICA_AROMA.py \
+-in /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/MELODIC_2_50_dim.ica/filtered_func_data.nii.gz \
+-out /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/ICA_AROMA_mask_2_50_dim \
+-mc /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/mc/prefiltered_func_data_mcf.par \
+-affmat /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/reg/example_func2highres.mat \
+-warp /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/reg/highres2standard_warp.nii.gz \
+-md /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/MELODIC_2_50_dim.ica/filtered_func_data.ica \
+-m /rds/project/rds-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing/sub-36116/ses-20240530/prep_5+.feat/aroma_mask.nii.gz \
+
+echo "ICA-AROMA analysis complete."
