@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# `Define the input file path`
+`input_file="filtered_func_data_clean.nii.gz"`
+
+# `Split the 4D file into individual volumes`
+`fslsplit $input_file volume_ -t`
+
+# `Create each segment by merging specific volumes with custom names, adjusted for the removal of the first 10 volumes`
+# `Segment 1: 00:00 - 00:12 (volumes 10 to 24), named "S1_rest"`
+`fslmerge -t S1_rest.nii.gz $(printf "volume_%04d.nii.gz " {10..24})`
+
+# `Segment 2: 00:12 - 03:59 (volumes 25 to 308), named "S2_Inception"`
+`fslmerge -t S2_Inception.nii.gz $(printf "volume_%04d.nii.gz " {25..308})`
+
+# `Segment 3: 03:59 - 04:19 (volumes 309 to 333), named "S3_rest"`
+`fslmerge -t S3_rest.nii.gz $(printf "volume_%04d.nii.gz " {309..333})`
+
+# `Segment 4: 04:19 - 05:52 (volumes 334 to 449), named "S4_Inscape"`
+`fslmerge -t S4_Inscape.nii.gz $(printf "volume_%04d.nii.gz " {334..449})`
+
+# `Segment 5: 05:52 - 06:12 (volumes 450 to 474), named "S5_rest"`
+`fslmerge -t S5_rest.nii.gz $(printf "volume_%04d.nii.gz " {450..474})`
+
+# `Merge Segment 2 (Inception) and Segment 4 (Inscape) into "S6_inception_inscape"`
+`fslmerge -t S6_inception_inscape.nii.gz S2_Inception.nii.gz S4_Inscape.nii.gz`
+
+# `Clean up temporary files`
+`rm volume_*.nii.gz`
+
+`echo "Segmentation complete. Segments saved with names: S1_rest, S2_Inception, S3_rest, S4_Inscape, S5_rest, and S6_inception_inscape"`
