@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# The script uses AFNI and FSL to calculate voxelwise zALFF and zfALFF 
+# Author: Amir E
+
+# Load required modules
+module load afni/17.0.00 
+module load fsl
+
+# Define the base directory containing the subject data
+base_dir="/home/iv285/rds/rds-rowe-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing"
+
+# Get the current date in YYYY-MM-DD format
+current_date=$(date +"%Y-%m-%d")
+
+# Define log file with date
+log_file="${base_dir}/Iryna_ALFF_${current_date}.log"
+
+# Start logging
+echo "Starting ALFF processing: $(date)" >> "$log_file"
+
+# Loop through each subject and session
+for subject_dir in ${base_dir}/sub-*; do
+    subject=$(basename "${subject_dir}")
+
+    for session_dir in ${subject_dir}/ses-*; do
+        session=$(basename "${session_dir}")       
+
+        # Define the BOLD file directory
+        bold_dir="${session_dir%/}/Feat_prep_movie.feat/Melodic_70_dim.ica/Movies_fslsplit"
+
+        # Check if the BOLD directory exists
+        if [ ! -d "$bold_dir" ]; then
+            echo "BOLD directory not found for ${subject} ${session}: $bold_dir" >> "$log_file"
+            continue
+        fi
+
+        # Loop through all BOLD files in the directory
+        for bold in "$bold_dir"/*.nii.gz; do
+            # Check if the file exists
+            if [ ! -f "$bold" ]; then
+                echo "No BOLD files found in $bold_dir" >> "$log_file"
+                continue
+            fi
+
+            # Extract the base name of the BOLD file
+            bold_basename=$(basename "${bold}" .nii.gz)
+
+            # Define the paths to the outputs
+            z_alff_output="${bold_dir}/${bold_basename}_Z_ALFF_Run2.nii.gz"
+            z_falff_output="${bold_dir}/${bold_basename}_Z_fALFF_Run2.nii.gz"
+
+            echo "Processing ${bold_basename} in ${bold_dir} for ${subject} ${session}..." >> "$log_file"
+
+            # Bandpass filtering
+            bold_bp="${bold_dir}/temp_BP.nii.gz"
+            3dBandpass -prefix "${bold_bp}" 0.01 0.08 "${bold}"
+
+            # Compute the brain mask
+            mask="${bold_dir}/temp_alff_mask.nii.gz"
+            3dAutomask -prefix "${mask}" "${bold}"
+
+            # Compute ALFF
+            alff_output="${bold_dir}/temp_alff.nii.gz"
+            3dTstat -stdev -mask "${mask}" -prefix "${alff_output}" "${bold_bp}"
+
+            # Compute fALFF
+            bold_sd="${bold_dir}/temp_sd.nii.gz"
+            3dTstat -stdev -mask "${mask}" -prefix "${bold_sd}" "${bold}"
+            falff_output="${bold_dir}/temp_falff.nii.gz"
+            3dcalc -prefix "${falff_output}" -a "${mask}" -b "${alff_output}" -c "${bold_sd}" \
+                   -expr '(1.0*bool(a))*((1.0*b)/(1.0*c))' -float
+
+            # Compute z-scores for ALFF
+            alff_mean_file="${bold_dir}/temp_mean_alff.txt"
+            alff_sd_file="${bold_dir}/temp_sd_alff.txt"
+            fslstats "${alff_output}" -k "${mask}" -m > "${alff_mean_file}"
+            alff_mean=$(cat "${alff_mean_file}")
+            fslstats "${alff_output}" -k "${mask}" -s > "${alff_sd_file}"
+            alff_sd=$(cat "${alff_sd_file}")
+            fslmaths "${alff_output}" -sub ${alff_mean} -div ${alff_sd} -mas "${mask}" "${z_alff_output}"
+
+            # Compute z-scores for fALFF
+            falff_mean_file="${bold_dir}/temp_mean_falff.txt"
+            falff_sd_file="${bold_dir}/temp_sd_falff.txt"
+            fslstats "${falff_output}" -k "${mask}" -m > "${falff_mean_file}"
+            falff_mean=$(cat "${falff_mean_file}")
+            fslstats "${falff_output}" -k "${mask}" -s > "${falff_sd_file}"
+            falff_sd=$(cat "${falff_sd_file}")
+            fslmaths "${falff_output}" -sub ${falff_mean} -div ${falff_sd} -mas "${mask}" "${z_falff_output}"
+
+            # Remove temporary files
+            rm -f "${bold_dir}/temp"*
+
+            echo "Completed processing for ${bold_basename} in ${subject}, ${session}" >> "$log_file"
+        done
+    done
+done
+
+echo "ALFF processing completed: $(date)" >> "$log_file"
