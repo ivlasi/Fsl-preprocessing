@@ -1,0 +1,9 @@
+#Extract the Mask Using fslmaths
+fslmaths /home/iv285/Yeo_JNeurophysiol11_MNI152/Yeo2011_7Networks_MNI152_FreeSurferConformed1mm.nii.gz
+\ -thr 2 -uthr 2 -bin /home/iv285/Yeo_JNeurophysiol11_MNI152/somatomotor_mask.nii.gz
+
+Resample the Mask to 2mm (if Needed)
+flirt -in /home/iv285/Yeo_JNeurophysiol11_MNI152/somatomotor_mask.nii.gz \ 
+-ref /usr/local/software/fsl/6.0.7.15/data/standard/MNI152_T1_2mm.nii.gz \
+-out /home/iv285/Yeo_JNeurophysiol11_MNI152/somatomotor_mask_2mm.nii.gz \
+-applyisoxfm 2 -interp nearestneighbour
