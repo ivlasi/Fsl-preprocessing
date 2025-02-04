@@ -1,0 +1,53 @@
+# Get the mean for the ALFF values
+#!/bin/bash
+
+# Define the mask file  
+MASK="/home/iv285/Yeo_JNeurophysiol11_MNI152/central_exec_mask_resampled.nii.gz"
+# Loop over all ALFF images in the current directory  
+for img in *MNI_space.nii.gz; do  
+  echo "Processing $img..."  
+  # Run fslstats for the current image  
+  mean_value=$(fslstats "$img" -k "$MASK" -M)  
+  echo "$img mean: $mean_value"  
+done
+# Option_2 to loop through each subject and get the mean
+
+#!/bin/bash
+
+# Base directory
+base_dir="/home/iv285/rds/rds-rowe-k1PgZFWfeZY/group/p00259/naturalistic_preprocessing"
+
+# Output CSV file
+output_csv="${base_dir}/mean_values_ALFF_CEN_combined.csv"
+
+# Mask file
+MASK="/home/iv285/Yeo_JNeurophysiol11_MNI152/central_exec_mask_resampled.nii.gz"
+
+# Create CSV header
+echo "Subject,Session,File,Mean Value" > "$output_csv" || { echo "Permission denied: $output_csv"; exit 1; }
+
+# Loop through subjects and sessions
+for subject_dir in ${base_dir}/sub-*; do
+    subject=$(basename "${subject_dir}")
+
+    for session_dir in ${subject_dir}/ses-*; do
+        session=$(basename "${session_dir}")
+
+        # Target files
+        images=("Z_ALFF_S6_inception_inscape_MNI_space.nii.gz" \
+                "Z_ALFF_filtered_func_data_clean_MNI_space.nii.gz")
+
+        for img_file in "${images[@]}"; do
+            img_path="${session_dir}/${img_file}"
+
+            if [ -f "$img_path" ]; then
+                # Extract mean using the mask
+                mean_value=$(fslstats "$img_path" -k "$MASK" -M)
+                echo "${subject},${session},${img_file},${mean_value}" >> "$output_csv"
+                echo "Processed $img_file with mean $mean_value"
+            else
+                echo "File not found: $img_file in ${subject}, ${session}"
+            fi
+        done
+    done
+done
